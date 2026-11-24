@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { AppShell } from './components/layout/AppShell.js';
 import { LoginPage } from './pages/Login.js';
-import { CampaignsPage, PendingReviewPage, AuditLogPage } from './pages/Placeholders.js';
+import { CampaignsPage } from './pages/Campaigns.js';
+import { CampaignDetailPage } from './pages/CampaignDetail.js';
+import { AssetReviewPage } from './pages/AssetReview.js';
+import { AuditLogPage } from './pages/AuditLog.js';
 import { Skeleton } from './components/ui/skeleton.js';
 
 const queryClient = new QueryClient({
@@ -53,10 +56,18 @@ export function App() {
               }
             />
             <Route
-              path="/pending-review"
+              path="/campaigns/:id"
               element={
                 <ProtectedRoute>
-                  <PendingReviewPage />
+                  <CampaignDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assets/:id"
+              element={
+                <ProtectedRoute>
+                  <AssetReviewPage />
                 </ProtectedRoute>
               }
             />
