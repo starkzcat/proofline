@@ -5,6 +5,11 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { campaignsRouter } from './modules/campaigns/campaigns.routes.js';
+import { assetsRouter, campaignAssetsRouter } from './modules/assets/assets.routes.js';
+import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { commentsRouter } from './modules/comments/comments.routes.js';
+import { auditRouter } from './modules/audit/audit.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -27,6 +32,12 @@ export function createApp(): Express {
 
   // Mount API modules
   app.use('/api/auth', authRouter);
+  app.use('/api/campaigns/:campaignId/assets', campaignAssetsRouter);
+  app.use('/api/campaigns', campaignsRouter);
+  app.use('/api/uploads', uploadsRouter);
+  app.use('/api/assets', assetsRouter);
+  app.use('/api/versions', commentsRouter);
+  app.use('/api/audit-logs', auditRouter);
 
   // 404 handler for undefined routes
   app.use('/api', (_req, res) => {
