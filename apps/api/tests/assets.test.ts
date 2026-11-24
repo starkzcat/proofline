@@ -24,6 +24,61 @@ describe('Assets & State Machine Transitions API', () => {
     role: Role.CLIENT,
   });
 
+  describe('GET /api/assets/:id', () => {
+    it('returns asset details when authorized', async () => {
+      vi.spyOn(prisma.asset, 'findUnique').mockResolvedValueOnce({
+        id: 'asset-1',
+        campaignId: 'camp-1',
+        title: 'Hero Banner',
+        status: AssetStatus.IN_REVIEW,
+        currentVersion: 1,
+        campaign: { id: 'camp-1', name: 'Q4 Launch', clientName: 'Client' },
+        versions: [],
+        auditLogs: [],
+      } as unknown as Awaited<ReturnType<typeof prisma.asset.findUnique>>);
+
+      const res = await request(app)
+        .get('/api/assets/asset-1')
+        .set('Cookie', [`${AUTH_COOKIE_NAME}=${marketerToken}`]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.asset.id).toBe('asset-1');
+    });
+
+    it('returns 403 when CLIENT is not assigned to the asset campaign', async () => {
+      vi.spyOn(prisma.asset, 'findUnique').mockResolvedValueOnce({
+        id: 'asset-unassigned',
+        campaignId: 'camp-unassigned',
+        title: 'Internal Banner',
+        status: AssetStatus.DRAFT,
+        currentVersion: 1,
+        campaign: { id: 'camp-unassigned', name: 'Internal', clientName: 'Internal' },
+        versions: [],
+        auditLogs: [],
+      } as unknown as Awaited<ReturnType<typeof prisma.asset.findUnique>>);
+
+      vi.spyOn(prisma.campaignMember, 'findUnique').mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .get('/api/assets/asset-unassigned')
+        .set('Cookie', [`${AUTH_COOKIE_NAME}=${clientToken}`]);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('returns 404 when asset does not exist', async () => {
+      vi.spyOn(prisma.asset, 'findUnique').mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .get('/api/assets/nonexistent-id')
+        .set('Cookie', [`${AUTH_COOKIE_NAME}=${adminToken}`]);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
   describe('POST /api/campaigns/:campaignId/assets', () => {
     it('creates asset in DRAFT status with initial version', async () => {
       vi.spyOn(prisma.campaign, 'findUnique').mockResolvedValueOnce({
