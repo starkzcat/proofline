@@ -2,7 +2,7 @@
 
 Internal creative review tool for marketing teams—replacing scattered email/Slack feedback with strict role-based approvals, immutable asset versioning, and an atomic audit trail.
 
-**Live Demo:** `...` | **CI Status:** `![CI](https://github.com/starkzcat/campaign-approval-hub/actions/workflows/ci.yml/badge.svg)`
+**Live Demo:** `...` | **CI Status:** `![CI](https://github.com/starkzcat/proofline/actions/workflows/ci.yml/badge.svg)`
 
 > **Try RBAC in 10 Seconds:** Use the persistent **Demo Role Switcher** in the top bar to toggle instantly between **Admin**, **Marketer**, and **Client** accounts with pre-seeded campaigns, multi-version assets, and audit logs.
 
