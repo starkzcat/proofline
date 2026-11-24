@@ -53,14 +53,17 @@ jobs:
 
       - name: Generate Prisma client & sync test DB
         run: |
-          npx prisma generate --workspace=apps/api
-          npx prisma db push --workspace=apps/api --skip-generate
+          npm --workspace=apps/api run db:generate
+          npm --workspace=apps/api run db:push -- --skip-generate
 
       - name: Typecheck
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
+
+      - name: Build web application
+        run: npm --workspace=apps/web run build
 
       - name: Test
         run: npm test
