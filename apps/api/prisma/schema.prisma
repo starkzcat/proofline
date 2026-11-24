@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MARKETER
+  CLIENT
+}
+
+enum CampaignStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum AssetStatus {
+  DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  ARCHIVED
+}
+
+enum AuditAction {
+  CAMPAIGN_CREATED
+  CAMPAIGN_UPDATED
+  ASSET_CREATED
+  VERSION_UPLOADED
+  ASSET_SUBMITTED
+  CHANGES_REQUESTED
+  ASSET_APPROVED
+  ASSET_ARCHIVED
+  COMMENT_ADDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  assignedCampaigns CampaignMember[]
+  uploadedVersions  AssetVersion[]
+  comments          Comment[]
+  auditLogs         AuditLog[]
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  clientName  String
+  status      CampaignStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  members   CampaignMember[]
+  assets    Asset[]
+  auditLogs AuditLog[]
+}
+
+model CampaignMember {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+model Asset {
+  id             String      @id @default(cuid())
+  campaignId     String
+  title          String
+  description    String?
+  status         AssetStatus @default(DRAFT)
+  currentVersion Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  campaign  Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  versions  AssetVersion[]
+  auditLogs AuditLog[]
+
+  @@index([campaignId, status])
+}
+
+model AssetVersion {
+  id            String   @id @default(cuid())
+  assetId       String
+  versionNumber Int
+  fileKey       String
+  fileUrl       String
+  fileName      String
+  mimeType      String
+  fileSizeBytes Int
+  changeNotes   String?
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  asset      Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  uploadedBy User      @relation(fields: [uploadedById], references: [id])
+  comments   Comment[]
+
+  @@unique([assetId, versionNumber])
+}
+
+model Comment {
+  id             String   @id @default(cuid())
+  assetVersionId String
+  authorId       String
+  body           String
+  createdAt      DateTime @default(now())
+
+  assetVersion AssetVersion @relation(fields: [assetVersionId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id])
+
+  @@index([assetVersionId, createdAt])
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  campaignId String
+  assetId    String?
+  actorId    String
+  action     AuditAction
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  asset    Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  actor    User     @relation(fields: [actorId], references: [id])
+
+  @@index([campaignId, createdAt])
+  @@index([assetId, createdAt])
+}
