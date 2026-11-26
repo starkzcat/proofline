@@ -2,12 +2,84 @@ import type { Request, Response } from 'express';
 import {
   AssetStatus,
   AuditAction,
+  Role,
   type CreateAssetInput,
   type CreateVersionInput,
   type RequestChangesInput,
 } from '@proofline/shared';
 import { prisma } from '../../config/prisma.js';
 import { canUserAccessCampaign } from '../../utils/access.js';
+
+export async function listAssets(req: Request, res: Response): Promise<void> {
+  const user = req.user!;
+  const { status, campaignId } = req.query as { status?: AssetStatus; campaignId?: string };
+
+  const where: Record<string, unknown> = {};
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (campaignId) {
+    where.campaignId = campaignId;
+  }
+
+  if (user.role === Role.CLIENT) {
+    const memberships = await prisma.campaignMember.findMany({
+      where: { userId: user.userId },
+      select: { campaignId: true },
+    });
+    const assignedCampaignIds = memberships.map((m) => m.campaignId);
+
+    if (campaignId && !assignedCampaignIds.includes(campaignId)) {
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this campaign.' },
+      });
+      return;
+    }
+
+    where.campaignId = { in: assignedCampaignIds };
+  }
+
+  const assets = await prisma.asset.findMany({
+    where,
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      campaign: {
+        select: { id: true, name: true, clientName: true },
+      },
+      versions: {
+        orderBy: { versionNumber: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          versionNumber: true,
+          fileName: true,
+          fileUrl: true,
+          mimeType: true,
+          _count: { select: { comments: true } },
+        },
+      },
+    },
+  });
+
+  res.status(200).json({
+    assets: assets.map((a) => ({
+      id: a.id,
+      campaignId: a.campaignId,
+      campaignName: a.campaign.name,
+      clientName: a.campaign.clientName,
+      title: a.title,
+      description: a.description,
+      status: a.status,
+      currentVersion: a.currentVersion,
+      createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
+      latestVersion: a.versions[0] || null,
+      commentCount: a.versions[0]?._count?.comments ?? 0,
+    })),
+  });
+}
 
 export async function createAsset(req: Request, res: Response): Promise<void> {
   const { campaignId } = req.params;

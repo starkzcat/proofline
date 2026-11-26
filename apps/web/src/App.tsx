@@ -7,6 +7,7 @@ import { LoginPage } from './pages/Login.js';
 import { CampaignsPage } from './pages/Campaigns.js';
 import { CampaignDetailPage } from './pages/CampaignDetail.js';
 import { AssetReviewPage } from './pages/AssetReview.js';
+import { PendingReviewPage } from './pages/PendingReview.js';
 import { AuditLogPage } from './pages/AuditLog.js';
 import { Skeleton } from './components/ui/skeleton.js';
 
@@ -60,6 +61,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <CampaignDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pending-review"
+              element={
+                <ProtectedRoute>
+                  <PendingReviewPage />
                 </ProtectedRoute>
               }
             />

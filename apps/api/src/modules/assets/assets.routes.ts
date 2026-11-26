@@ -12,6 +12,7 @@ import {
   archiveAsset,
   createAsset,
   getAssetById,
+  listAssets,
   requestChanges,
   submitAsset,
   uploadNewVersion,
@@ -22,6 +23,7 @@ export const assetsRouter = Router();
 assetsRouter.use(authenticate);
 
 // Asset CRUD and detail
+assetsRouter.get('/', listAssets);
 assetsRouter.get('/:id', getAssetById);
 assetsRouter.post('/:id/versions', requireRole(Role.ADMIN, Role.MARKETER), validateBody(createVersionSchema), uploadNewVersion);
 assetsRouter.post('/:id/submit', requireRole(Role.ADMIN, Role.MARKETER), submitAsset);

@@ -121,8 +121,11 @@ export function CampaignsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {campaigns.map((camp) => {
-            const inReviewCount = camp.assets.filter((a) => a.status === 'IN_REVIEW').length;
-            const approvedCount = camp.assets.filter((a) => a.status === 'APPROVED').length;
+            const inReviewCount =
+              camp.pendingReviewCount ??
+              camp.assets?.filter((a) => a.status === 'IN_REVIEW').length ??
+              0;
+            const totalAssets = camp.assetCount ?? camp._count?.assets ?? 0;
 
             return (
               <Link
@@ -143,7 +146,7 @@ export function CampaignsPage() {
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>
-                    {approvedCount} Approved · {inReviewCount} In Review
+                    {totalAssets} {totalAssets === 1 ? 'Asset' : 'Assets'} · {inReviewCount} In Review
                   </span>
                   <span className="text-[11px] text-slate-400 tabular-nums">
                     {new Date(camp.updatedAt).toLocaleDateString()}

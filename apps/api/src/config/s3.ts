@@ -36,6 +36,8 @@ export async function createPresignedUploadUrl(
   const fileKey = `uploads/${Date.now()}-${crypto.randomUUID()}-${sanitizedName}`;
 
   let uploadUrl: string;
+  let publicUrl: string;
+
   if (env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY) {
     const command = new PutObjectCommand({
       Bucket: env.S3_BUCKET,
@@ -46,14 +48,14 @@ export async function createPresignedUploadUrl(
     uploadUrl = await getSignedUrl(s3Client, command, {
       expiresIn: PRESIGNED_URL_EXPIRES_SECONDS,
     });
+    publicUrl = env.S3_PUBLIC_BASE_URL
+      ? `${env.S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${fileKey}`
+      : `https://${env.S3_BUCKET}.s3.amazonaws.com/${fileKey}`;
   } else {
-    // In local dev/testing without active S3/R2 credentials:
-    uploadUrl = `https://${env.S3_BUCKET}.mock-storage.local/${fileKey}?expires=${PRESIGNED_URL_EXPIRES_SECONDS}`;
+    // In local dev/testing without active S3/R2 credentials, upload to the local API server
+    uploadUrl = `/api/uploads/local/${fileKey}`;
+    publicUrl = `/api/uploads/local/${fileKey}`;
   }
-
-  const publicUrl = env.S3_PUBLIC_BASE_URL
-    ? `${env.S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${fileKey}`
-    : `https://${env.S3_BUCKET}.mock-storage.local/${fileKey}`;
 
   return {
     uploadUrl,

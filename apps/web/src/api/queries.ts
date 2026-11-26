@@ -11,14 +11,15 @@ export interface CampaignSummary {
   id: string;
   name: string;
   clientName: string;
+  description?: string | null;
   status: CampaignStatus;
   createdAt: string;
   updatedAt: string;
-  members: Array<{
-    user: { id: string; name: string; email: string; role: Role };
-  }>;
-  assets: Array<{ id: string; status: AssetStatus }>;
-  _count: { assets: number };
+  members: Array<{ id: string; name: string; email: string; role: Role }>;
+  assetCount?: number;
+  pendingReviewCount?: number;
+  assets?: Array<{ id: string; status: AssetStatus }>;
+  _count?: { assets: number };
 }
 
 export interface AssetSummary {
@@ -134,6 +135,34 @@ export function useCampaign(id: string) {
     queryKey: ['campaign', id],
     queryFn: () => apiClient<{ campaign: CampaignDetail }>(`/campaigns/${id}`),
     enabled: Boolean(id),
+  });
+}
+
+export interface PendingReviewAsset {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  clientName: string;
+  title: string;
+  description?: string | null;
+  status: AssetStatus;
+  currentVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  latestVersion?: {
+    id: string;
+    versionNumber: number;
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+  } | null;
+  commentCount: number;
+}
+
+export function usePendingReviewAssets() {
+  return useQuery<{ assets: PendingReviewAsset[] }>({
+    queryKey: ['assets', 'pending-review'],
+    queryFn: () => apiClient<{ assets: PendingReviewAsset[] }>('/assets?status=IN_REVIEW'),
   });
 }
 
@@ -266,9 +295,9 @@ export function useAddComment(versionId: string, assetId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { content: string }) =>
-      apiClient<{ comment: CommentItem }>(`/comments/${versionId}/comments`, {
+      apiClient<{ comment: CommentItem }>(`/versions/${versionId}/comments`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ body: data.content }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['asset', assetId] });
@@ -297,8 +326,12 @@ export async function uploadFileToPresignedUrl(file: File): Promise<{
     }),
   });
 
-  // 2. PUT upload to S3 / R2
-  const uploadResponse = await fetch(presignRes.uploadUrl, {
+  // 2. PUT upload to S3 / R2 or local upload handler
+  const targetUploadUrl = presignRes.uploadUrl.startsWith('http')
+    ? presignRes.uploadUrl
+    : `${(import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '')}${presignRes.uploadUrl}`;
+
+  const uploadResponse = await fetch(targetUploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': file.type || 'application/octet-stream',
@@ -310,9 +343,13 @@ export async function uploadFileToPresignedUrl(file: File): Promise<{
     throw new Error('Failed to upload file to storage');
   }
 
+  const finalPublicUrl = presignRes.publicUrl.startsWith('http')
+    ? presignRes.publicUrl
+    : `${(import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '')}${presignRes.publicUrl}`;
+
   return {
     fileKey: presignRes.fileKey,
-    fileUrl: presignRes.publicUrl,
+    fileUrl: finalPublicUrl,
     fileName: file.name,
     mimeType: file.type || 'application/octet-stream',
     fileSizeBytes: file.size,
